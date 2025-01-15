@@ -69,3 +69,16 @@ else
     echo "Backup failed"
     exit 1
 fi
+
+# Retain only the latest 3 backups
+BACKUP_FILES=($(ls -1t "$BACKUP_DIR"/*.sql))  # List files sorted by modification time (newest first)
+TOTAL_FILES=${#BACKUP_FILES[@]}
+
+if [ "$TOTAL_FILES" -gt 3 ]; then
+    for ((i=3; i<TOTAL_FILES; i++)); do
+        rm -f "${BACKUP_FILES[$i]}"  # Delete old files
+    done
+    echo "Old backups deleted, retaining only the latest 3 backups."
+else
+    echo "No old backups to delete, total backups: $TOTAL_FILES."
+fi
