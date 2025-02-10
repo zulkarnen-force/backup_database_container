@@ -91,7 +91,7 @@ fi
 
 # Sync to remote storage if remote name is provided
 if [[ -n "$REMOTE_NAME" ]]; then
-    REMOTE_BACKUP_DIR="${REMOTE_NAME}:${BACKUP_DIR}/${CONTAINER_NAME}"
+    REMOTE_BACKUP_DIR="${REMOTE_NAME}:${BACKUP_DIR}"
     echo "Syncing backups to remote: $REMOTE_BACKUP_DIR"
     rclone sync "$BACKUP_DIR" "$REMOTE_BACKUP_DIR" --progress
     if [ $? -eq 0 ]; then
