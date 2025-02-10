@@ -7,15 +7,17 @@ CONTAINER_NAME=""
 USERNAME=""
 PASSWORD=""
 REMOTE_NAME=""
+BACKUP_BASE_DIR=~/docker-backup  # Default backup directory
 
 # Help function
 usage() {
-    echo "Usage: $0 --db_type <db_type> --db_name <db_name> --container <container_name> --username <username> --password <password> [--remote-name <remote_name>]"
+    echo "Usage: $0 --db_type <db_type> --db_name <db_name> --container <container_name> --username <username> --password <password> [--backup-dir <backup_dir>] [--remote-name <remote_name>]"
     echo "  -t, --db_type       Database type (psql, mysql, etc.)"
     echo "  -n, --db_name       Database name"
     echo "  -c, --container     Docker container name"
     echo "  -u, --username      Username for the database"
     echo "  -p, --password      Password for the database"
+    echo "  -b, --backup-dir    Directory where backups should be stored (default: ~/docker-backup)"
     echo "  -r, --remote-name   rclone remote name for syncing backups"
     exit 1
 }
@@ -28,6 +30,7 @@ while [[ "$#" -gt 0 ]]; do
         -c|--container) CONTAINER_NAME="$2"; shift ;;
         -u|--username) USERNAME="$2"; shift ;;
         -p|--password) PASSWORD="$2"; shift ;;
+        -b|--backup-dir) BACKUP_BASE_DIR="$2"; shift ;;
         -r|--remote-name) REMOTE_NAME="$2"; shift ;;
         -h|--help) usage ;;
         *) echo "Unknown parameter: $1"; usage ;;
@@ -43,10 +46,10 @@ fi
 
 # Generate timestamp for the filename
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
-BACKUP_DIR=~/docker-backup/${CONTAINER_NAME}
-BACKUP_FILE=${BACKUP_DIR}/${TIMESTAMP}.sql
+BACKUP_DIR="${BACKUP_BASE_DIR}/${CONTAINER_NAME}"
+BACKUP_FILE="${BACKUP_DIR}/${TIMESTAMP}.sql"
 
-# Create backup directory if not exists
+# Create backup directory if it doesn't exist
 mkdir -p "$BACKUP_DIR"
 
 # Database backup command
@@ -88,12 +91,13 @@ fi
 
 # Sync to remote storage if remote name is provided
 if [[ -n "$REMOTE_NAME" ]]; then
-    echo "Syncing backups to remote: $REMOTE_NAME"
-    rclone sync "$BACKUP_DIR" "$REMOTE_NAME:/docker-backup/${CONTAINER_NAME}" --progress
+    REMOTE_BACKUP_DIR="${REMOTE_NAME}:${BACKUP_DIR}/${CONTAINER_NAME}"
+    echo "Syncing backups to remote: $REMOTE_BACKUP_DIR"
+    rclone sync "$BACKUP_DIR" "$REMOTE_BACKUP_DIR" --progress
     if [ $? -eq 0 ]; then
-        echo "Backup synced successfully to remote: $REMOTE_NAME"
+        echo "Backup synced successfully to remote: $REMOTE_BACKUP_DIR"
     else
-        echo "Failed to sync backup to remote: $REMOTE_NAME"
+        echo "Failed to sync backup to remote: $REMOTE_BACKUP_DIR"
         exit 1
     fi
 fi
